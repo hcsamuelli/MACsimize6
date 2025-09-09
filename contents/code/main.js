@@ -1,27 +1,30 @@
 function log(msg) {
-    // print("MACsimize6: " + msg);
+    print("MACsimize6: " + msg);
 }
 
 var handleFullscreen = readConfig("handleFullscreen", true);
 var handleMaximized = readConfig("handleMaximized", true);
 var moveToLast = readConfig("moveToLast", false);
 var enableIfOnlyOne = readConfig("enableIfOnlyOne", false);
+var keepEmptyDesktop = readConfig("keepEmptyDesktop", false);
+var onlyOnPrimary = readConfig("onlyOnPrimary", false);
+var primaryScreenIndex = readConfig("primaryScreenIndex", 0);
 
 const savedDesktops = {};
 const savedModes = {};
 const savedHandlers = {};
 
 const systemSkippedWindows = ['kwin', 'kwin_wayland', 'ksmserver-logout-greeter', 'ksmserver',
-'kscreenlocker_greet', 'ksplash', 'ksplashqml', 'plasmashell', 'org.kde.plasmashell', 'krunner'];
+    'kscreenlocker_greet', 'ksplash', 'ksplashqml', 'plasmashell', 'org.kde.plasmashell', 'krunner'];
 var configSkippedWindows = readConfig("SkipWindows", "lattedock, latte-dock, org.kde.spectacle").toString().toLowerCase().split(/,\s*/);
 var alwaysSkippedWindows = systemSkippedWindows.concat(configSkippedWindows)
 
 function shouldSkip(window) {
-    const windowClass = (window.resourceClass.toString() || "").toLowerCase();
-    if (!windowClass) {
+    if (!window) {
         log(`Skipped: Null`);
         return true;
     }
+    const windowClass = (window.resourceClass.toString() || "").toLowerCase();
 
     if (alwaysSkippedWindows.indexOf(windowClass) != -1) {
         log(`Skipped: ${windowClass}`);
@@ -43,6 +46,14 @@ function getNextDesktopNumber() {
 }
 
 function moveToNewDesktop(window) {
+    if (onlyOnPrimary) {
+        var primaryScreen = workspace.screens[primaryScreenIndex];
+        var currentScreen = window.output;
+        if (currentScreen != primaryScreen){
+            log("Window on screen " + currentScreen + " is not on primary screen (" + primaryScreenIndex + "). Ignoring.");
+            return;
+        }
+    }
     let windowName = window.caption.toString();
     let windowId = window.internalId.toString();
     let numMonitors = workspace.screens.length;
@@ -56,7 +67,7 @@ function moveToNewDesktop(window) {
         log("Window: " + windowId + " is already on separate desktop");
         return;
     } else {
-        log("Creating new desktop with name : " | windowName);
+        log("Creating new desktop with name : " + windowName);
         let newDesktopNumber = -1;
         if (moveToLast) {
             newDesktopNumber = workspace.desktops.length;
@@ -89,7 +100,7 @@ function cleanDesktop(desktop) {
         let window = workspace.windowList()[i];
         if (window.desktops.includes(desktop) && !window.skipTaskbar) {
             let windowName = window.resourceName;
-            log ("Window: " + windowName + " is on the desktop");
+            log("Window: " + windowName + " is on the desktop");
             window.desktops = window.desktops.filter(item => item.id !== desktop.id);
             if (window.desktops.length < 1) {
                 window.desktops = [workspace.desktops[0]];
@@ -112,7 +123,9 @@ function restoreDesktop(window) {
         window.desktops = desktops;
         cleanDesktop(currentDesktop);
         workspace.currentDesktop = window.desktops[0];
-        workspace.removeDesktop(currentDesktop);
+        if (!keepEmptyDesktop) {
+            workspace.removeDesktop(currentDesktop);
+        }
     } else {
         log(windowId + " has no saved desktops. Not restoring")
     }
@@ -124,7 +137,7 @@ function fullScreenChanged(window) {
     log("Window : " + windowId + " full-screen : " + window.fullScreen);
     if (window.fullScreen) {
         moveToNewDesktop(window);
-    } else if (windowId in savedModes && savedModes[windowId] == 3){
+    } else if (windowId in savedModes && savedModes[windowId] == 3) {
         log("window: " + windowId + "is still maximized.");
         return;
     } else {
@@ -162,21 +175,28 @@ function minimizedStateChanged(window) {
 function windowCaptionChanged(window) {
     let windowId = window.internalId.toString();
     let windowName = window.caption.toString();
-    if (windowId in savedDesktops ) {
+    if (windowId in savedDesktops) {
         log("Updating desktop name for " + windowId);
         window.desktops[0].name = windowName;
     }
 }
 
 function installWindowHandlers(window) {
+    if (onlyOnPrimary) {
+        const primaryScreen = workspace.screens[primaryScreenIndex];
+        if (!primaryScreen || window.output !== primaryScreen) {
+            log("Window on screen " + window.screen + " is not on primary screen (" + primaryScreenIndex + "). Ignoring.");
+            return;
+        }
+    }
     // Check if the window is normal and can be maximized and full-screened.
-    if (window !== null && window.normalWindow && ! window.skipTaskbar && ! window.splash && ( window.fullScreenable || window.maximizable ) ){
+    if (window !== null && window.normalWindow && !window.skipTaskbar && !window.splash && (window.fullScreenable || window.maximizable)) {
         let windowId = window.internalId.toString();
         if (windowId in savedHandlers) {
             log(windowId + " is already being tracked");
             return;
         } else {
-            savedHandlers[windowId] = window.resourceName ;
+            savedHandlers[windowId] = window.resourceName;
         }
         log("Installing handles for " + windowId);
         if (handleMaximized && window.maximizable) {
@@ -227,7 +247,7 @@ function install() {
         // Get worksace area or maximized windows
         var area = workspace.clientArea(KWin.MaximizeArea, window);
         // If window is "maximized" move it a new desktop right away
-        if(window.width + 1 >= area.width && window.height + 1 >= area.height && handleMaximized) {
+        if (window.width + 1 >= area.width && window.height + 1 >= area.height && handleMaximized) {
             moveToNewDesktop(window);
         }
     });

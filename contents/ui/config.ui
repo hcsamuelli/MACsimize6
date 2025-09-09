@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<ui version="4.0">
+<ui version="4.1">
  <class>KWin::TemporaryVirtualDesktopsConfigForm</class>
  <widget class="QWidget" name="KWin::TemporaryVirtualDesktopsConfigForm">
   <property name="geometry">
@@ -70,6 +70,36 @@
         <string>Comma separated list of window classes</string>
       </property>
     </widget>
+   </item>
+   <item row="5" column="0">
+    <widget class="QCheckBox" name="kcfg_keepEmptyDesktop">
+     <property name="text">
+      <string>Workaround: Keep empty virtual desktop after restoring</string>
+     </property>
+     <property name="checked">
+      <bool>false</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="6" column="0">
+    <widget class="QCheckBox" name="kcfg_onlyOnPrimary">
+     <property name="text">
+      <string>Enable only on primary screen</string>
+     </property>
+     <property name="checked">
+      <bool>false</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="7" column="0">
+    <widget class="QLabel" name="label_2">
+     <property name="text">
+      <string>Primary screen index:</string>
+     </property>
+    </widget>
+   </item>
+   <item row="7" column="1">
+    <widget class="QSpinBox" name="kcfg_primaryScreenIndex"/>
    </item>
   </layout>
  </widget>
