@@ -9,6 +9,7 @@ var enableIfOnlyOne = readConfig("enableIfOnlyOne", false);
 var keepEmptyDesktop = readConfig("keepEmptyDesktop", false);
 var onlyOnPrimary = readConfig("onlyOnPrimary", false);
 var primaryScreenIndex = readConfig("primaryScreenIndex", 0);
+var sendNewToMain = readConfig("sendNewToMain", false);
 
 const savedDesktops = {};
 const savedModes = {};
@@ -243,6 +244,22 @@ function install() {
         if (shouldSkip(window)) {
             return;
         }
+
+        if (sendNewToMain) {
+            const currentDesktop = workspace.currentDesktop;
+            const windowsOnCurrentDesktop = workspace.windowList().filter(w => w.desktops.includes(currentDesktop));
+            const isMaximizedDesktop = windowsOnCurrentDesktop.some(w => w.internalId.toString() in savedDesktops);
+
+            if (isMaximizedDesktop) {
+                log("Current desktop is a maximized desktop. Moving new window to primary desktop.");
+                const primaryDesktop = workspace.desktops[0];
+                window.desktops = [primaryDesktop];
+                // workspace.currentDesktop = primaryDesktop;
+                workspace.activeWindow = window;
+                return;
+            }
+        }
+
         installWindowHandlers(window);
         // Get worksace area or maximized windows
         var area = workspace.clientArea(KWin.MaximizeArea, window);
