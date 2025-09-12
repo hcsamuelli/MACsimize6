@@ -248,15 +248,19 @@ function install() {
         if (sendNewToMain) {
             const currentDesktop = workspace.currentDesktop;
             const windowsOnCurrentDesktop = workspace.windowList().filter(w => w.desktops.includes(currentDesktop));
-            const isMaximizedDesktop = windowsOnCurrentDesktop.some(w => w.internalId.toString() in savedDesktops);
+            const maximizedWindow = windowsOnCurrentDesktop.find(w => w.internalId.toString() in savedDesktops);
 
-            if (isMaximizedDesktop) {
-                log("Current desktop is a maximized desktop. Moving new window to primary desktop.");
-                const primaryDesktop = workspace.desktops[0];
-                window.desktops = [primaryDesktop];
-                // workspace.currentDesktop = primaryDesktop;
-                workspace.activeWindow = window;
-                return;
+            if (maximizedWindow) {
+                log("Current desktop is a maximized desktop.");
+                if (maximizedWindow.resourceClass !== window.resourceClass) {
+                    log(`New window's resource class '${window.resourceClass}' is different from maximized window's '${maximizedWindow.resourceClass}'. Moving to primary desktop.`);
+                    const primaryDesktop = workspace.desktops[0];
+                    window.desktops = [primaryDesktop];
+                    workspace.activeWindow = window;
+                    return;
+                } else {
+                    log(`New window's resource class '${window.resourceClass}' is the same as maximized window's. Not moving.`);
+                }
             }
         }
 
